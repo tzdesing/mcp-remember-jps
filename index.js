@@ -2,7 +2,6 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import sqlite3 from "sqlite3";
-import http from "http";
 
 const db = new sqlite3.Database("/data/memory.db");
 
@@ -33,26 +32,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     });
   }
 });
-
-// Health check server for container orchestration (only if not in stdio mode)
-if (process.stdin.isTTY === false && process.env.ENABLE_HEALTH_CHECK !== "false") {
-  const healthServer = http.createServer((req, res) => {
-    if (req.url === "/health") {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ status: "ok" }));
-    } else {
-      res.writeHead(404);
-      res.end();
-    }
-  });
-
-  const PORT = process.env.PORT || 3000;
-  healthServer.listen(PORT, () => {
-    console.error(`Health check server listening on port ${PORT}`);
-  }).catch((err) => {
-    console.error(`Failed to start health check server: ${err.message}`);
-  });
-}
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
