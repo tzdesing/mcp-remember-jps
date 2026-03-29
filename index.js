@@ -34,21 +34,25 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
-// Health check server for container orchestration
-const healthServer = http.createServer((req, res) => {
-  if (req.url === "/health") {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ status: "ok" }));
-  } else {
-    res.writeHead(404);
-    res.end();
-  }
-});
+// Health check server for container orchestration (only if not in stdio mode)
+if (process.stdin.isTTY === false && process.env.ENABLE_HEALTH_CHECK !== "false") {
+  const healthServer = http.createServer((req, res) => {
+    if (req.url === "/health") {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ status: "ok" }));
+    } else {
+      res.writeHead(404);
+      res.end();
+    }
+  });
 
-const PORT = process.env.PORT || 3000;
-healthServer.listen(PORT, () => {
-  console.log(`Health check server listening on port ${PORT}`);
-});
+  const PORT = process.env.PORT || 3000;
+  healthServer.listen(PORT, () => {
+    console.error(`Health check server listening on port ${PORT}`);
+  }).catch((err) => {
+    console.error(`Failed to start health check server: ${err.message}`);
+  });
+}
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
